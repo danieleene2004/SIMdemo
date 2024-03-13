@@ -4,5 +4,12 @@ body {
 }
 
 canvas {
+    top: 0;
+    left: 0;
+    position: fixed;
     margin: 0;
+}
+
+button {
+    position:absolute; top:40%; left:30%;
 }
