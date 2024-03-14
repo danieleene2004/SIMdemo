@@ -7,13 +7,12 @@ import * as THREEx from "threex-domevents"
 //! SETUP
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-camera.rotateY(45);
-//@ts-ignore
-camera.position.z = 10; camera.position.y = 10;
 
-let cursor: Vector3D = { x: 1, y: 0, z: 1 };
-let grid: THREE.Mesh[][] = [];
-let select: boolean = false;
+let gridSize = {
+	x: 40,
+	y: 20
+}
+let grid: THREE.Mesh[][][] = [];
 let selection: THREE.Mesh[][] = [];
 
 //@ts-ignore
@@ -21,65 +20,77 @@ const renderer = new THREE.WebGLRenderer({canvas: artifactCanvas});
 renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
 
-const light = new PointLight(0xffffff, 100);
+const light = new PointLight(0xffffff, 400);
+const lights = new PointLight(0xffff44, 5);
+let pointer = new THREE.SphereGeometry(0.4);
+let pointerts = new THREE.Mesh(pointer, new THREE.MeshStandardMaterial({color:0xffff00}))
+lights.add(pointerts);
 light.position.y = 10;
-camera.add(light);
-scene.add(new THREE.AmbientLight(), light);
+lights.position.y = 1.5;
+lights.decay = 1;
+scene.add(new THREE.AmbientLight(), light, lights);
 
 const controls = new OrbitControls(camera, renderer.domElement)
-controls.maxDistance = 15;
-controls.minDistance = 2;
+controls.maxDistance = 20;
+controls.minDistance = 13;
 controls.enableDamping = true;
-controls.enablePan = false;
 controls.dampingFactor = 0.1;
-controls.rotateSpeed = 0.3; 
-controls.maxTargetRadius = 20;
-controls.listenToKeyEvents(window);
-
+controls.rotateSpeed = 0.3;
+controls.enableZoom = false;
 
 function buildEntity(building: Building) {
 	const geometry = new THREE.BoxGeometry(building.size.x * 0.95, building.size.y * 0.95, building.size.z * 0.95);
-	const material = new THREE.MeshStandardMaterial( { color: 0xaa0000 } );
+	const material = new THREE.MeshStandardMaterial( { color: 0x999999 } );
 	const cube = new THREE.Mesh( geometry, material );
 	//@ts-ignore
-	cube.position.z = building.position.z
+	cube.position.z = building.position.z + 0.5;
 	//@ts-ignore
-	cube.position.x = building.position.x
+	cube.position.x = building.position.x + 0.5;
 	//@ts-ignore
-	cube.position.y = building.position.y
+	cube.position.y = building.position.y;
 	scene.add( cube );
 	return cube;
 }
 
-for (let index = -10; index < 10; index++) {
+let tempGrid: THREE.Mesh[] = []
+for (let index = 0; index < gridSize.x; index++) {
 	let temp: THREE.Mesh[] = []
-	for (let jndex = -10; jndex < 10; jndex++) {
+	for (let jndex = 0; jndex < gridSize.y; jndex++) {
 		temp.push(buildEntity({
 			type: BuildingType.GridTile,
 			position: {x:index, y:1, z:jndex},
-			size: {x:1, y:0.2, z:1}
+			size: {x:1, y:0.1, z:1}
 		}))
 	}
 	
-	grid.push(temp);
+	tempGrid.push(temp);
 	temp = [];
 }
-
+grid.push(tempGrid);
+let hovered = grid[0][Math.floor(lights.position.x)][Math.floor(lights.position.z)].position;
 function cursorPosition() {
-	grid.forEach(element => {
+	try {
+		hovered = grid[0][Math.floor(lights.position.x)][Math.floor(lights.position.z)].position;
+	} catch (e) {
+
+	}
+
+	grid[0].forEach(element => {
 		element.forEach(cube => {
-			cube.material = new THREE.MeshStandardMaterial( { color: 0xaa0000 } );
+			cube.material.color = new THREE.Color(0xaaaaaa);
 		});
 	});
-	grid[cursor.x][cursor.z].material = new THREE.MeshStandardMaterial( { color: 0x00ff00 } );
+	
+	selection = grid[0][Math.floor(hovered.x)][Math.floor(hovered.z)]
+	selection.material.color = new THREE.Color(0xffff00);
 }
 
+let halfX = Math.floor(grid[0].length / 2)
+let halfY = Math.floor(grid[0][halfX].length / 2)
 
-function movement() {
-	const speed = 1;
-	camera.position.z += ((keys.backwards ? 1 : 0) - (keys.forward ? 1 : 0)) * speed;
-	camera.position.x += ((keys.left ? 1 : 0) - (keys.right ? 1 : 0)) * speed;
-}
+controls.target.x = grid[0][halfX][halfY].position.x;
+controls.target.z = grid[0][halfX][halfY].position.z;
+
 const keys = {
 	forward: false,
 	backwards: false,
@@ -103,10 +114,37 @@ function animate() {
 	requestAnimationFrame( animate );
 
 	cursorPosition();
-	movement();
 	controls.update();
 	renderer.render( scene, camera );
 }
 
 animate();
 
+function debugging() {
+	let round = (num: number) => Math.floor(num * 100) / 100;
+	return "\nCAMERA ROTATION\n\tX: " + round(camera.rotation.x) +
+		"\n\tZ: " + round(camera.rotation.z) +
+		"\n\tY: " + round(camera.rotation.y) +
+		"\n\nCAMERA POSITION\n\tX: " + round(camera.position.x) +
+		"\n\tZ: " + round(camera.position.z) +
+		"\n\tY: " + round(camera.position.y) +
+		"\n\nTARGET POSITION" +
+		"\n\tX: " + round(controls.target.x) +
+		"\n\tZ: " + round(controls.target.z) +
+		"\n\tY: " + round(controls.target.y) +
+		"\n\nDISTANCE FROM TARGET: " + round(controls.getDistance())
+}
+
+setInterval(() => {
+	camera.position.y = 10;	
+	controls.target.y = 0;
+	light.position.z = camera.position.z;
+	light.position.x = camera.position.x;
+	lights.position.z = controls.target.z;
+	lights.position.x = controls.target.x;
+}, 1)
+
+scene.fog = new THREE.Fog( 0x444444, 0, 50 );
+scene.background = new THREE.Color(0x444444)
+
+scene.json

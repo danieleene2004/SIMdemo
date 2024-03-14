@@ -13,3 +13,7 @@ export interface Building {
 	position: Vector3D;
 	size: Vector3D;
 }
+
+export interface Map {
+	buildings: Building
+}
