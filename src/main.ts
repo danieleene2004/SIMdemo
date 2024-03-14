@@ -1,23 +1,26 @@
 import * as THREE from 'three';
-import { Vector3D, Building, BuildingType } from './models';
+import { Building, BuildingType } from './models';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { PointLight } from 'three';
+
 import * as THREEx from "threex-domevents"
 
-//! SETUP
+//* SETUP
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 
+//! PENDING CHANGES
+//? Defines the size of the grid, will later be take the information dynamically from the json
 let gridSize = {
 	x: 40,
-	y: 20
+	y: 40
 }
 let grid: THREE.Mesh[][][] = [];
 let selection: THREE.Mesh[][] = [];
 
 //@ts-ignore
 const renderer = new THREE.WebGLRenderer({canvas: artifactCanvas});
-renderer.setSize( window.innerWidth, window.innerHeight );
+renderer.setSize( window.innerWidth, window.innerHeight);
 document.body.appendChild( renderer.domElement );
 
 const light = new PointLight(0xffffff, 400);
@@ -59,7 +62,7 @@ for (let index = 0; index < gridSize.x; index++) {
 		temp.push(buildEntity({
 			type: BuildingType.GridTile,
 			position: {x:index, y:1, z:jndex},
-			size: {x:1, y:0.1, z:1}
+			size: {x:1, y:0.01, z:1}
 		}))
 	}
 	
@@ -83,6 +86,7 @@ function cursorPosition() {
 	
 	selection = grid[0][Math.floor(hovered.x)][Math.floor(hovered.z)]
 	selection.material.color = new THREE.Color(0xffff00);
+	
 }
 
 let halfX = Math.floor(grid[0].length / 2)
@@ -114,12 +118,16 @@ function animate() {
 	requestAnimationFrame( animate );
 
 	cursorPosition();
+
+	
+
 	controls.update();
 	renderer.render( scene, camera );
 }
 
 animate();
 
+let deb = false;
 function debugging() {
 	let round = (num: number) => Math.floor(num * 100) / 100;
 	return "\nCAMERA ROTATION\n\tX: " + round(camera.rotation.x) +
@@ -136,6 +144,7 @@ function debugging() {
 }
 
 setInterval(() => {
+	if (deb) console.log(debugging());
 	camera.position.y = 10;	
 	controls.target.y = 0;
 	light.position.z = camera.position.z;
@@ -147,4 +156,10 @@ setInterval(() => {
 scene.fog = new THREE.Fog( 0x444444, 0, 50 );
 scene.background = new THREE.Color(0x444444)
 
-scene.json
+//! KEYBOARD COMMANDS
+//* [SPACE]: Auto rotate
+//* [?]: Enable debug information in the console
+document.addEventListener("keyup", e => {
+	if (e.key == " ") controls.autoRotate = !controls.autoRotate;
+	if (e.key == "?") deb = !deb;
+})
