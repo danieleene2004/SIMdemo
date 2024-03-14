@@ -34,6 +34,8 @@ controls.enablePan = false;
 controls.dampingFactor = 0.1;
 controls.rotateSpeed = 0.3; 
 controls.maxTargetRadius = 20;
+controls.listenToKeyEvents(window);
+
 
 function buildEntity(building: Building) {
 	const geometry = new THREE.BoxGeometry(building.size.x * 0.95, building.size.y * 0.95, building.size.z * 0.95);
